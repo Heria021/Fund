@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "target": "ES6",
+    "module": "CommonJS",
+    "rootDir": "./src",
+    "outDir": "./dist",
+    "strict": true,
+    "esModuleInterop": true,  // ✅ Important for default imports
+    "skipLibCheck": true,      // ✅ Avoids issues with type mismatches
+    "forceConsistentCasingInFileNames": true
+  }
+}
