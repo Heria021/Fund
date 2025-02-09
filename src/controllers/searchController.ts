@@ -21,7 +21,6 @@ export const searchInvestorMentor = async (req: Request, res: Response): Promise
       return;
     }
 
-    console.log('pass 1')
     if (user.credits <= 0) {
       await sendEmail(email, "Credit Exhausted",
         `Your credits are exhausted. Please send a new email with subject "recharge 5 credits" to ${ADMIN_EMAIL} to get credits.`);
@@ -30,13 +29,12 @@ export const searchInvestorMentor = async (req: Request, res: Response): Promise
         success: true,
         response: {
           status: false,
-          response: ["credit over"]
+          response: ["Credit over. Please check your mail for credits."]
         }
       });
       return;
     }
 
-    console.log('pass 2')
     const databaseData = await InvestorMentor.find();
 
     const aiResponse = await fetchGeminiResponse(query, databaseData);

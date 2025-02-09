@@ -10,7 +10,7 @@ const PORT = process.env.PORT || 5000;
 const startCheckingEmails = async () => {
   console.log("📩 Checking emails for recharge requests...");
   await checkEmails(); 
-  setTimeout(startCheckingEmails, 10 * 60 * 1000); //in 10 mins recheck
+  setTimeout(startCheckingEmails, 10 * 60 * 100); // 1 min
 };
 
 connectDB().then(() => {
