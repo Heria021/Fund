@@ -45,7 +45,6 @@ export const sendEmail = async (to: string, subject: string, text: string) => {
   }
 };
 
-// Read Emails (Check for Recharge Requests)
 oAuth2Client.setCredentials({ refresh_token: REFRESH_TOKEN });
 
 const gmail = google.gmail({ version: "v1", auth: oAuth2Client });
@@ -53,7 +52,6 @@ export const checkEmails = async () => {
   try {
     console.log("📩 Checking unread emails for recharge requests...");
 
-    // Fetch only unread messages
     const unreadEmails = await gmail.users.messages.list({
       userId: "me",
       q: "subject:'recharge 5 credits' is:unread",
@@ -92,15 +90,14 @@ export const checkEmails = async () => {
         continue;
       }
 
-      // Find if the sender has other unread recharge requests
-      const existingUnreadRequests = await gmail.users.messages.list({
+      const existingRequests = await gmail.users.messages.list({
         userId: "me",
-        q: `from:${senderEmail} subject:'recharge 5 credits' is:unread`,
-        maxResults: 1,
+        q: `from:${senderEmail} subject:'recharge 5 credits'`,
+        maxResults: 100, 
       });
 
-      if (existingUnreadRequests.data.messages && existingUnreadRequests.data.messages.length > 1) {
-        console.log(`⛔ ${senderEmail} already has an unread request. Sending rejection email.`);
+      if (existingRequests.data.messages && existingRequests.data.messages.length > 1) {
+        console.log(`⛔ ${senderEmail} has already requested credits before. Sending rejection email.`);
         await sendRejectionEmail(senderEmail);
       } else {
         const user = await User.findOne({ email: senderEmail });
@@ -117,11 +114,10 @@ export const checkEmails = async () => {
         await sendSuccessEmail(senderEmail);
       }
 
-      // **Mark email as read** to prevent reprocessing
       await gmail.users.messages.modify({
         userId: "me",
         id: msg.id!,
-        requestBody: { removeLabelIds: ["UNREAD"] }, // Marks the email as read
+        requestBody: { removeLabelIds: ["UNREAD"] }, 
       });
 
       console.log(`📩 Marked email from ${senderEmail} as read.`);

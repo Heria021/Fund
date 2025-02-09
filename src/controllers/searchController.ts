@@ -23,7 +23,7 @@ export const searchInvestorMentor = async (req: Request, res: Response): Promise
 
     if (user.credits <= 0) {
       await sendEmail(email, "Credit Exhausted",
-        `Your credits are exhausted. Please send a new email with subject "recharge 5 credits" to ${ADMIN_EMAIL} to get credits.`);
+        `Your credits are exhausted. Please send a new email with subject and body "recharge 5 credits" to ${ADMIN_EMAIL} to get credits.`);
 
       res.json({
         success: true,
