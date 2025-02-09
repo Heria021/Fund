@@ -49,11 +49,11 @@ export const sendEmail = async (to: string, subject: string, text: string) => {
 oAuth2Client.setCredentials({ refresh_token: REFRESH_TOKEN });
 
 const gmail = google.gmail({ version: "v1", auth: oAuth2Client });
-
 export const checkEmails = async () => {
   try {
-    console.log("📩 Checking emails for recharge requests...");
+    console.log("📩 Checking unread emails for recharge requests...");
 
+    // Fetch only unread messages
     const unreadEmails = await gmail.users.messages.list({
       userId: "me",
       q: "subject:'recharge 5 credits' is:unread",
@@ -61,7 +61,7 @@ export const checkEmails = async () => {
     });
 
     if (!unreadEmails.data.messages || unreadEmails.data.messages.length === 0) {
-      console.log("📭 No new emails found.");
+      console.log("📭 No new unread emails found.");
       return;
     }
 
@@ -85,43 +85,51 @@ export const checkEmails = async () => {
         ? Buffer.from(bodyPart.body.data, "base64").toString("utf-8")
         : "";
 
-      console.log(`📨 New email from ${senderEmail} - Body: ${emailBody}`);
+      console.log(`📨 Processing email from ${senderEmail}`);
 
       if (!emailBody.toLowerCase().includes("recharge 5 credits")) {
         console.log(`🚫 Ignoring invalid email from ${senderEmail}`);
         continue;
       }
 
-      const existingEmails = await gmail.users.messages.list({
+      // Find if the sender has other unread recharge requests
+      const existingUnreadRequests = await gmail.users.messages.list({
         userId: "me",
-        q: `from:${senderEmail} subject:'recharge 5 credits'`,
-        maxResults: 20,
+        q: `from:${senderEmail} subject:'recharge 5 credits' is:unread`,
+        maxResults: 1,
       });
 
-      if (existingEmails.data.messages && existingEmails.data.messages.length > 1) {
-        console.log(`⛔ ${senderEmail} already requested a recharge before.`);
+      if (existingUnreadRequests.data.messages && existingUnreadRequests.data.messages.length > 1) {
+        console.log(`⛔ ${senderEmail} already has an unread request. Sending rejection email.`);
         await sendRejectionEmail(senderEmail);
-        continue;
+      } else {
+        const user = await User.findOne({ email: senderEmail });
+
+        if (!user) {
+          console.log(`❌ User ${senderEmail} not found`);
+          continue;
+        }
+
+        user.credits += 5;
+        await user.save();
+
+        console.log(`✅ Recharged 5 credits for ${senderEmail}`);
+        await sendSuccessEmail(senderEmail);
       }
 
-      const user = await User.findOne({ email: senderEmail });
+      // **Mark email as read** to prevent reprocessing
+      await gmail.users.messages.modify({
+        userId: "me",
+        id: msg.id!,
+        requestBody: { removeLabelIds: ["UNREAD"] }, // Marks the email as read
+      });
 
-      if (!user) {
-        console.log(`❌ User ${senderEmail} not found`);
-        continue;
-      }
-
-      user.credits += 5;
-      await user.save();
-
-      console.log(`✅ Recharged 5 credits for ${senderEmail}`);
-      await sendSuccessEmail(senderEmail);
+      console.log(`📩 Marked email from ${senderEmail} as read.`);
     }
   } catch (error) {
     console.error("❌ Error checking emails:", error);
   }
 };
-
 const sendRejectionEmail = async (email: string) => {
   await sendEmail(email, "Recharge Request Denied", "Sorry, we are not offering additional credits at this time.");
   console.log(`🚫 Sent rejection email to ${email}`);
