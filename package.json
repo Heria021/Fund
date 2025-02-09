@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "start": "nodemon src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
     "dev": "nodemon --exec ts-node src/server.ts"
   },
   "keywords": [],
@@ -25,6 +26,7 @@
     "@types/mongoose": "^5.11.96",
     "@types/node": "^22.13.1",
     "@types/nodemailer": "^6.4.17",
+    "@vercel/node": "^5.1.2",
     "express": "^4.21.2",
     "nodemon": "^3.1.9",
     "ts-node": "^10.9.2",
