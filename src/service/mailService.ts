@@ -48,6 +48,7 @@ export const sendEmail = async (to: string, subject: string, text: string) => {
 oAuth2Client.setCredentials({ refresh_token: REFRESH_TOKEN });
 
 const gmail = google.gmail({ version: "v1", auth: oAuth2Client });
+
 export const checkEmails = async () => {
   try {
     console.log("📩 Checking unread emails for recharge requests...");
@@ -71,25 +72,24 @@ export const checkEmails = async () => {
 
       const headers = emailData.data.payload?.headers || [];
       const senderHeader = headers.find((h) => h.name === "From");
+      const subjectHeader = headers.find((h) => h.name === "Subject");
       const senderEmail = senderHeader ? senderHeader.value?.split("<")[1].replace(">", "") : null;
+      const subject = subjectHeader?.value || "";
 
       if (!senderEmail) {
         console.log("⚠️ Could not extract sender email. Skipping...");
         continue;
       }
 
-      const bodyPart = emailData.data.payload?.parts?.find((p) => p.mimeType === "text/plain");
-      const emailBody = bodyPart?.body?.data
-        ? Buffer.from(bodyPart.body.data, "base64").toString("utf-8")
-        : "";
-
       console.log(`📨 Processing email from ${senderEmail}`);
 
-      if (!emailBody.toLowerCase().includes("recharge 5 credits")) {
-        console.log(`🚫 Ignoring invalid email from ${senderEmail}`);
+      // Checking only in subject
+      if (subject.toLowerCase() !== "recharge 5 credits") {
+        console.log(`🚫 Ignoring email from ${senderEmail} with incorrect subject`);
         continue;
       }
 
+      // Check if the sender has already requested credits
       const existingRequests = await gmail.users.messages.list({
         userId: "me",
         q: `from:${senderEmail} subject:'recharge 5 credits'`,
@@ -114,6 +114,7 @@ export const checkEmails = async () => {
         await sendSuccessEmail(senderEmail);
       }
 
+      // Mark email as read
       await gmail.users.messages.modify({
         userId: "me",
         id: msg.id!,
@@ -126,6 +127,7 @@ export const checkEmails = async () => {
     console.error("❌ Error checking emails:", error);
   }
 };
+
 const sendRejectionEmail = async (email: string) => {
   await sendEmail(email, "Recharge Request Denied", "Sorry, we are not offering additional credits at this time.");
   console.log(`🚫 Sent rejection email to ${email}`);
